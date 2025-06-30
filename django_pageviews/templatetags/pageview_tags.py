@@ -7,6 +7,119 @@ from django.utils import timezone
 
 register = template.Library()
 
+@register.filter
+def format_number(value, precision=1):
+    """
+    Format a number to a more readable format (e.g., 1120 -> 1.1K)
+    
+    Usage:
+    {{ view_count|format_number }}
+    {{ view_count|format_number:2 }}  # 2 decimal places
+    
+    Args:
+        value: The number to format
+        precision: Number of decimal places (default: 1)
+    """
+    try:
+        num = float(value)
+    except (ValueError, TypeError):
+        return value
+    
+    if num < 1000:
+        return str(int(num)) if num == int(num) else f"{num:.{precision}f}".rstrip('0').rstrip('.')
+    
+    # Define the suffixes and their corresponding values
+    suffixes = [
+        (1_000_000_000_000, 'T'),  # Trillion
+        (1_000_000_000, 'B'),      # Billion
+        (1_000_000, 'M'),          # Million
+        (1_000, 'K'),              # Thousand
+    ]
+    
+    for threshold, suffix in suffixes:
+        if num >= threshold:
+            formatted = num / threshold
+            # Format with specified precision, then remove trailing zeros
+            formatted_str = f"{formatted:.{precision}f}".rstrip('0').rstrip('.')
+            return f"{formatted_str}{suffix}"
+    
+    return str(int(num)) if num == int(num) else f"{num:.{precision}f}".rstrip('0').rstrip('.')
+
+@register.filter
+def format_number_with_options(value, options="precision:1,min_threshold:1000"):
+    """
+    Format a number with more configuration options
+    
+    Usage:
+    {{ view_count|format_number_with_options:"precision:2,min_threshold:10000" }}
+    {{ view_count|format_number_with_options:"precision:0,min_threshold:1000,suffix_style:lower" }}
+    
+    Options:
+        precision: Number of decimal places (default: 1)
+        min_threshold: Minimum number before formatting kicks in (default: 1000)
+        suffix_style: 'upper' (K,M,B) or 'lower' (k,m,b) (default: 'upper')
+    """
+    try:
+        num = float(value)
+    except (ValueError, TypeError):
+        return value
+    
+    # Parse options
+    config = {
+        'precision': 1,
+        'min_threshold': 1000,
+        'suffix_style': 'upper'
+    }
+    
+    if options:
+        for option in options.split(','):
+            if ':' in option:
+                key, val = option.strip().split(':', 1)
+                key = key.strip()
+                val = val.strip()
+                
+                if key == 'precision':
+                    try:
+                        config['precision'] = int(val)
+                    except ValueError:
+                        pass
+                elif key == 'min_threshold':
+                    try:
+                        config['min_threshold'] = int(val)
+                    except ValueError:
+                        pass
+                elif key == 'suffix_style':
+                    if val.lower() in ['upper', 'lower']:
+                        config['suffix_style'] = val.lower()
+    
+    # If below threshold, return as-is
+    if num < config['min_threshold']:
+        return str(int(num)) if num == int(num) else f"{num:.{config['precision']}f}".rstrip('0').rstrip('.')
+    
+    # Define the suffixes
+    if config['suffix_style'] == 'lower':
+        suffixes = [
+            (1_000_000_000_000, 't'),
+            (1_000_000_000, 'b'),
+            (1_000_000, 'm'),
+            (1_000, 'k'),
+        ]
+    else:
+        suffixes = [
+            (1_000_000_000_000, 'T'),
+            (1_000_000_000, 'B'),
+            (1_000_000, 'M'),
+            (1_000, 'K'),
+        ]
+    
+    for threshold, suffix in suffixes:
+        if num >= threshold:
+            formatted = num / threshold
+            formatted_str = f"{formatted:.{config['precision']}f}".rstrip('0').rstrip('.')
+            return f"{formatted_str}{suffix}"
+    
+    return str(int(num)) if num == int(num) else f"{num:.{config['precision']}f}".rstrip('0').rstrip('.')
+
 @register.simple_tag
 def get_view_count(obj):
     """Get the view count for an object"""

@@ -138,7 +138,7 @@ The mixin is primarily useful when you want more control over which objects get 
 
 ## Using Template Tags
 
-Django PageViews includes several template tags to display view statistics in your templates.
+Django PageViews includes several template tags and filters to display view statistics in your templates with powerful formatting options.
 
 First, load the template tags:
 
@@ -146,43 +146,258 @@ First, load the template tags:
 {% load pageview_tags %}
 ```
 
-### Display View Count
+### Number Formatting Filters
+
+Format large numbers into readable formats (e.g., 1120 → 1.1K):
+
+#### Basic Number Formatting: `format_number`
+
+```html
+<!-- Basic usage (1120 becomes 1.1K) -->
+{{ view_count|format_number }}
+
+<!-- With custom precision (1120 becomes 1.12K) -->
+{{ view_count|format_number:2 }}
+
+<!-- No decimals (1120 becomes 1K) -->
+{{ view_count|format_number:0 }}
+```
+
+#### Advanced Number Formatting: `format_number_with_options`
+
+```html
+<!-- Custom precision and minimum threshold -->
+{{ view_count|format_number_with_options:"precision:2,min_threshold:10000" }}
+
+<!-- Lowercase suffixes (1120 becomes 1.1k) -->
+{{ view_count|format_number_with_options:"precision:1,suffix_style:lower" }}
+
+<!-- Don't format numbers below 5000 -->
+{{ view_count|format_number_with_options:"min_threshold:5000" }}
+
+<!-- Multiple options -->
+{{ view_count|format_number_with_options:"precision:0,min_threshold:1000,suffix_style:upper" }}
+```
+
+**Configuration Options:**
+- `precision`: Number of decimal places (default: 1)
+- `min_threshold`: Minimum number before formatting kicks in (default: 1000)
+- `suffix_style`: `'upper'` for K,M,B or `'lower'` for k,m,b (default: 'upper')
+
+**Number Format Examples:**
+- `999` → `999` (unchanged)
+- `1000` → `1K`
+- `1120` → `1.1K`
+- `1500` → `1.5K`
+- `1000000` → `1M`
+- `2500000` → `2.5M`
+- `1000000000` → `1B`
+
+### Template Tags for View Counts
+
+#### Get View Count for Objects
 
 ```html
 <!-- Show view count for a specific object -->
-<p>{% get_view_count article %} views</p>
+<p>{{ article|get_view_count }} views</p>
+<p>{{ article|get_view_count|format_number }} views</p> <!-- With formatting -->
+```
 
+#### Get View Count for URLs
+
+```html
 <!-- Show view count for the current URL -->
 <p>{% get_url_view_count %} views</p>
 
-<!-- Show view count for a specific named view -->
-<p>{% get_view_name_count 'article_detail' %} views</p>
+<!-- Show view count for a specific URL -->
+<p>{% get_url_view_count '/blog/my-article/' %} views</p>
+
+<!-- With formatting -->
+<p>{% get_url_view_count as current_views %}{{ current_views|format_number }} views</p>
 ```
 
-### Display Popular Content
+#### Get View Count for Named Views
 
 ```html
-<!-- Get popular articles -->
+<!-- Show view count for the current view name -->
+<p>{% get_view_name_count %} views</p>
+
+<!-- Show view count for a specific named view -->
+<p>{% get_view_name_count 'article_detail' %} views</p>
+
+<!-- With formatting -->
+<p>{% get_view_name_count 'home' as home_views %}{{ home_views|format_number }} views</p>
+```
+
+### Template Tags for Popular Content
+
+#### Get Popular Objects
+
+```html
+<!-- Get popular articles from a specific app -->
 {% get_popular_objects 'Article' 'blog' limit=5 as popular_articles %}
 {% for article, count in popular_articles %}
-    <li>{{ article.title }} - {{ count }} views</li>
+    <li>{{ article.title }} - {{ count|format_number }} views</li>
 {% endfor %}
 
-<!-- Get popular URLs -->
-{% get_popular_urls limit=5 days=7 as popular_urls %}
-{% for url, count in popular_urls %}
-    <li><a href="{{ url }}">{{ url }}</a> - {{ count }} views</li>
+<!-- Get popular objects from any app (searches all apps) -->
+{% get_popular_objects 'Post' limit=3 as popular_posts %}
+{% for post, count in popular_posts %}
+    <li>{{ post.title }} - {{ count|format_number }} views</li>
+{% endfor %}
+
+<!-- Get popular objects from the last 7 days -->
+{% get_popular_objects 'Article' 'blog' limit=5 days=7 as recent_popular %}
+{% for article, count in recent_popular %}
+    <li>{{ article.title }} - {{ count|format_number }} views (last week)</li>
 {% endfor %}
 ```
 
-### Get Daily View Data
+#### Get Popular URLs
+
+```html
+<!-- Get most popular URLs -->
+{% get_popular_urls limit=5 as popular_urls %}
+{% for url, count in popular_urls %}
+    <li><a href="{{ url }}">{{ url }}</a> - {{ count|format_number }} views</li>
+{% endfor %}
+
+<!-- Get popular URLs from the last 30 days -->
+{% get_popular_urls limit=10 days=30 as monthly_popular %}
+{% for url, count in monthly_popular %}
+    <li><a href="{{ url }}">{{ url }}</a> - {{ count|format_number }} views this month</li>
+{% endfor %}
+```
+
+#### Get Popular View Names
+
+```html
+<!-- Get most popular named views -->
+{% get_popular_view_names limit=5 as popular_views %}
+{% for view_name, count in popular_views %}
+    <li>{{ view_name }} - {{ count|format_number }} views</li>
+{% endfor %}
+
+<!-- Get popular view names from the last 14 days -->
+{% get_popular_view_names limit=5 days=14 as recent_views %}
+{% for view_name, count in recent_views %}
+    <li>{{ view_name }} - {{ count|format_number }} views (last 2 weeks)</li>
+{% endfor %}
+```
+
+### Template Tags for Analytics
+
+#### Get Daily View Data
 
 ```html
 <!-- Get daily view counts for an object -->
 {% get_daily_views article days=14 as daily_data %}
+<ul>
 {% for date, count in daily_data.items %}
-    <li>{{ date|date:"M d" }}: {{ count }} views</li>
+    <li>{{ date|date:"M d" }}: {{ count|format_number }} views</li>
 {% endfor %}
+</ul>
+
+<!-- Get daily views for the last 30 days -->
+{% get_daily_views article days=30 as monthly_data %}
+<div class="chart-data">
+{% for date, count in monthly_data.items %}
+    <span data-date="{{ date|date:'Y-m-d' }}" data-views="{{ count }}">{{ count|format_number }}</span>
+{% endfor %}
+</div>
+```
+
+### Complete Usage Examples
+
+Here are some complete examples showing how to use multiple template tags together:
+
+#### Article Detail Page
+
+```html
+{% load pageview_tags %}
+
+<article>
+    <h1>{{ article.title }}</h1>
+    <p class="meta">
+        Views: {{ article|get_view_count|format_number }} | 
+        This page: {% get_url_view_count as page_views %}{{ page_views|format_number }}
+    </p>
+    
+    <div class="content">
+        {{ article.content }}
+    </div>
+</article>
+
+<!-- Daily views chart data -->
+<div class="daily-views">
+    <h3>Daily Views (Last 2 Weeks)</h3>
+    {% get_daily_views article days=14 as daily_data %}
+    {% for date, count in daily_data.items %}
+        <div class="day" data-views="{{ count }}">
+            {{ date|date:"M d" }}: {{ count|format_number }}
+        </div>
+    {% endfor %}
+</div>
+```
+
+#### Popular Content Sidebar
+
+```html
+{% load pageview_tags %}
+
+<div class="sidebar">
+    <!-- Popular Articles -->
+    <div class="widget">
+        <h3>Popular Articles</h3>
+        {% get_popular_objects 'Article' 'blog' limit=5 days=7 as popular_articles %}
+        <ul>
+        {% for article, count in popular_articles %}
+            <li>
+                <a href="{{ article.get_absolute_url }}">{{ article.title }}</a>
+                <span class="views">{{ count|format_number }} views</span>
+            </li>
+        {% endfor %}
+        </ul>
+    </div>
+    
+    <!-- Popular Pages -->
+    <div class="widget">
+        <h3>Trending Pages</h3>
+        {% get_popular_urls limit=5 days=7 as popular_urls %}
+        <ul>
+        {% for url, count in popular_urls %}
+            <li>
+                <a href="{{ url }}">{{ url|truncatechars:40 }}</a>
+                <span class="views">{{ count|format_number_with_options:"precision:0" }}</span>
+            </li>
+        {% endfor %}
+        </ul>
+    </div>
+</div>
+```
+
+#### Dashboard Statistics
+
+```html
+{% load pageview_tags %}
+
+<div class="dashboard">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Total Page Views</h3>
+            {% get_url_view_count '/' as home_views %}
+            <span class="big-number">{{ home_views|format_number }}</span>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Popular Content</h3>
+            {% get_popular_view_names limit=1 as top_view %}
+            {% for view_name, count in top_view %}
+                <p>{{ view_name }}: {{ count|format_number_with_options:"precision:1,suffix_style:lower" }}</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
 ```
 
 ## Configuration Options
