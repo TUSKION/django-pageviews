@@ -1,0 +1,50 @@
+[build-system]
+name = "hatchling"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "django-pageviews"
+version = "0.2.0"
+authors = [
+   {name = "TUSKION", email = "opensource@tuskion.com"},
+]
+description = "A simple and efficient Django app for tracking page views"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.1",
+    "Framework :: Django :: 5.2",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+]
+dependencies = [
+    "Django>=5.0",
+]
+
+[project.optional-dependencies]
+async = [
+    "celery>=5.0.0",
+    "redis>=4.0.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-django>=4.5.0",
+    "black>=22.3.0",
+    "isort>=5.10.0",
+    "flake8>=4.0.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/TUSKION/django-pageviews"
+"Bug Tracker" = "https://github.com/TUSKION/django-pageviews/issues"

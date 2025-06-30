@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+recursive-include django_pageviews/static *
+recursive-include django_pageviews/templates *
+recursive-include django_pageviews/management *
+recursive-include django_pageviews/migrations *
+recursive-include django_pageviews/templatetags *
