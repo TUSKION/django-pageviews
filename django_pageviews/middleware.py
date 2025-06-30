@@ -190,6 +190,19 @@ class PageViewMiddleware(MiddlewareMixin):
                 view_instance.kwargs = kwargs
                 view_instance.args = []
 
+                # First check if view has get_tracked_object method (from PageViewMixin)
+                if hasattr(view_class, 'get_tracked_object'):
+                    try:
+                        # Set up basic context for the view instance
+                        if hasattr(view_class, 'get_queryset'):
+                            view_instance.object_list = view_instance.get_queryset()
+                        
+                        # Call get_tracked_object and return its result directly
+                        # This will respect None returns from get_tracked_object
+                        return view_instance.get_tracked_object()
+                    except Exception as e:
+                        print(f"Error calling get_tracked_object: {e}")
+
                 # Check if view has get_object method (DetailView)
                 if hasattr(view_class, 'get_object'):
                     try:
