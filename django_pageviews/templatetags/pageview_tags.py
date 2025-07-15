@@ -238,3 +238,25 @@ def get_daily_views(obj, days=30):
     """
     from django_pageviews.models import PageView
     return PageView.get_daily_views(obj, days=days)
+
+@register.simple_tag
+def get_view_counts_for_objects(objects):
+    """
+    Get a dict mapping object.pk to view count for a list of objects.
+    Usage:
+        {% get_view_counts_for_objects object_list as view_counts %}
+        {{ view_counts|get_item:obj.pk }}
+    """
+    from django_pageviews.models import PageView
+    return PageView.get_view_counts_for_objects(objects)
+
+@register.filter
+def get_item(dictionary, key):
+    """
+    Dictionary lookup by key for templates.
+    Usage: {{ mydict|get_item:mykey }}
+    """
+    try:
+        return dictionary.get(key, 0)
+    except Exception:
+        return 0

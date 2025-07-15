@@ -57,6 +57,28 @@ class PageView(models.Model):
         return queryset.count()
     
     @classmethod
+    def get_view_counts_for_objects(cls, objects):
+        """
+        Returns a dict mapping object.pk -> view count for all objects in the list.
+        Optimized to avoid N+1 queries.
+        """
+        if not objects:
+            return {}
+        model = type(objects[0])
+        content_type = ContentType.objects.get_for_model(model)
+        object_ids = [obj.pk for obj in objects]
+        counts = (
+            cls.objects
+            .filter(content_type=content_type, object_id__in=object_ids)
+            .values('object_id')
+            .annotate(count=Count('id'))
+        )
+        # Map object_id to count
+        count_map = {item['object_id']: item['count'] for item in counts}
+        # Ensure all objects are present, even if count is 0
+        return {obj.pk: count_map.get(obj.pk, 0) for obj in objects}
+    
+    @classmethod
     def increment_view_count(cls, obj, ip_address=None, user_agent=None, session_key=None, request=None):
         """
         Record a page view, with caching/throttling to prevent duplicate/inflated counts.
