@@ -150,15 +150,24 @@ def get_view_name_count(context, view_name=None):
     return 0
 
 @register.simple_tag
-def get_popular_objects(model_name, app_label=None, limit=5, days=None):
+def get_popular_objects(model_name, app_label=None, limit=5, days=None, select_related=None, prefetch_related=None):
     """
     Get the most viewed objects of a specific model type
     
     Usage:
     {% get_popular_objects 'Post' 'blog' limit=3 as popular_posts %}
+    {% get_popular_objects 'Post' 'blog' limit=5 select_related='author' prefetch_related='tags,comments' as popular_posts %}
     {% for post, count in popular_posts %}
         <li>{{ post.title }} - {{ count }} views</li>
     {% endfor %}
+    
+    Args:
+        model_name: The model class name (string)
+        app_label: The app label (string, optional)
+        limit: Max number of objects (int, optional)
+        days: Only include views in the last N days (int, optional)
+        select_related: Comma-separated related fields for select_related (string, optional)
+        prefetch_related: Comma-separated related fields for prefetch_related (string, optional)
     """
     try:
         # Get the model class
@@ -173,10 +182,17 @@ def get_popular_objects(model_name, app_label=None, limit=5, days=None):
                     continue
             else:
                 return []
-        
         from django_pageviews.models import PageView
-        return PageView.get_popular_objects(model_class, limit=limit, days=days)
-    
+        # Parse select_related and prefetch_related if provided
+        select_related_fields = [f.strip() for f in select_related.split(',')] if select_related else None
+        prefetch_related_fields = [f.strip() for f in prefetch_related.split(',')] if prefetch_related else None
+        return PageView.get_popular_objects(
+            model_class,
+            limit=limit,
+            days=days,
+            select_related=select_related_fields,
+            prefetch_related=prefetch_related_fields
+        )
     except Exception as e:
         print(f"Error getting popular objects: {e}")
         return []
