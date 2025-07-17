@@ -280,13 +280,20 @@ class PageViewMiddleware(MiddlewareMixin):
         )
 
     def get_client_ip(self, request):
-        """Get the client IP address (supports both IPv4 and IPv6)"""
+        """Get the client IP address (supports both IPv4 and IPv6, Cloudflare, proxies)"""
+        cf_ip = request.META.get('HTTP_CF_CONNECTING_IP')
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            # Take first address and handle potential whitespace
+        real_ip = request.META.get('HTTP_X_REAL_IP')
+        remote_addr = request.META.get('REMOTE_ADDR', '')
+
+        if cf_ip:
+            ip = cf_ip
+        elif x_forwarded_for:
             ip = x_forwarded_for.split(',')[0].strip()
+        elif real_ip:
+            ip = real_ip
         else:
-            ip = request.META.get('REMOTE_ADDR', '')
+            ip = remote_addr
 
         # Handle IPv6 addresses that might be enclosed in brackets
         if ip.startswith('[') and ip.endswith(']'):
